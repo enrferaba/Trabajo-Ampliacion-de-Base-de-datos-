@@ -1,0 +1,24 @@
+graph TD
+    subgraph Cliente
+        Browser
+        CLI
+    end
+    subgraph Docker[Docker Compose]
+        Web[Web (Django + DRF)]
+        Worker[Celery Worker]
+        Beat[Celery Beat]
+        Flower
+        Redis[(Redis)]
+        Mongo[(MongoDB)]
+        Neo4j[(Neo4j)]
+    end
+    Browser -->|HTTP / REST| Web
+    CLI -->|API| Web
+    Web -->|Cache / Rate Limit| Redis
+    Web -->|CRUD Libros / Reseñas| Mongo
+    Web -->|Consultas Grafo| Neo4j
+    Worker -->|Tareas Asíncronas| Redis
+    Worker -->|Importación Masiva| Mongo
+    Worker -->|Recomendaciones| Neo4j
+    Beat -->|Programación| Worker
+    Flower -->|Monitoreo| Worker
