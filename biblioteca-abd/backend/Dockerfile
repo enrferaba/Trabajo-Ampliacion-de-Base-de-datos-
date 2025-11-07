@@ -6,10 +6,9 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends build-essential curl \
-    && rm -rf /var/lib/apt/lists/*
-
+# Avoid relying on Debian mirrors that may not be reachable in some environments.
+# The base image already ships with the build tools required for pure-Python wheels,
+# so we only upgrade pip tooling here.
 RUN python -m pip install --no-cache-dir --upgrade pip setuptools wheel
 
 COPY requirements.txt ./
