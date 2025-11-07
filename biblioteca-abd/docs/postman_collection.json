@@ -1,0 +1,30 @@
+{
+  "info": {
+    "name": "Biblioteca ABD API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Healthcheck",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{base_url}}/health",
+          "host": ["{{base_url}}"],
+          "path": ["health"]
+        }
+      }
+    },
+    {
+      "name": "List Books",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{base_url}}/api/books",
+          "host": ["{{base_url}}"],
+          "path": ["api", "books"]
+        }
+      }
+    }
+  ]
+}
