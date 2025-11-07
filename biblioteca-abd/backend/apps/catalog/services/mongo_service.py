@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Iterable, List, Optional
 
+from bson import ObjectId
+from bson.errors import InvalidId
 from django.conf import settings
-from pymongo import MongoClient, ASCENDING, DESCENDING
+from pymongo import ASCENDING, DESCENDING, MongoClient, ReturnDocument
 from pymongo.errors import PyMongoError
 
 
@@ -47,7 +49,9 @@ class MongoCatalogService:
         except PyMongoError:
             pass
 
-    def list_books(self, filters: Dict[str, Any], sort: str, order: str, skip: int, limit: int) -> List[Dict[str, Any]]:
+    def list_books(
+        self, filters: Dict[str, Any], sort: str, order: str, skip: int, limit: int
+    ) -> List[Dict[str, Any]]:
         database = self.db()
         sort_key = "avg_rating" if sort == "rating" else "rating_count"
         sort_direction = DESCENDING if order == "desc" else ASCENDING
@@ -62,7 +66,7 @@ class MongoCatalogService:
             .skip(skip)
             .limit(limit)
         )
-        return list(cursor)
+        return self._serialize_many(cursor)
 
     def _apply_filters(self, data: List[Dict[str, Any]], filters: Dict[str, Any]) -> List[Dict[str, Any]]:
         result = data
@@ -84,8 +88,9 @@ class MongoCatalogService:
             self._memory_books.append(data)
             return data
         inserted = database.books.insert_one(data)
-        data["_id"] = str(inserted.inserted_id)
-        return data
+        data_copy = dict(data)
+        data_copy["_id"] = str(inserted.inserted_id)
+        return data_copy
 
     def get_book(self, book_id: str) -> Optional[Dict[str, Any]]:
         database = self.db()
@@ -94,7 +99,8 @@ class MongoCatalogService:
                 if str(book.get("_id")) == str(book_id):
                     return book
             return None
-        return database.books.find_one({"_id": book_id})
+        result = database.books.find_one({"_id": self._object_id(book_id)})
+        return self._serialize(result)
 
     def update_book(self, book_id: str, updates: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         database = self.db()
@@ -104,8 +110,12 @@ class MongoCatalogService:
                     book.update(updates)
                     return book
             return None
-        result = database.books.find_one_and_update({"_id": book_id}, {"$set": updates}, return_document=True)
-        return result
+        result = database.books.find_one_and_update(
+            {"_id": self._object_id(book_id)},
+            {"$set": updates},
+            return_document=ReturnDocument.AFTER,
+        )
+        return self._serialize(result)
 
     def list_authors(self, filters: Dict[str, Any], skip: int, limit: int) -> List[Dict[str, Any]]:
         database = self.db()
@@ -116,7 +126,7 @@ class MongoCatalogService:
                 data = [item for item in data if term in item.get("name", "").lower()]
             return data[skip : skip + limit]
         cursor = database.authors.find(filters).skip(skip).limit(limit)
-        return list(cursor)
+        return self._serialize_many(cursor)
 
     def create_author(self, data: Dict[str, Any]) -> Dict[str, Any]:
         database = self.db()
@@ -125,8 +135,28 @@ class MongoCatalogService:
             self._memory_authors.append(data)
             return data
         inserted = database.authors.insert_one(data)
-        data["_id"] = str(inserted.inserted_id)
-        return data
+        data_copy = dict(data)
+        data_copy["_id"] = str(inserted.inserted_id)
+        return data_copy
 
+    def _serialize_many(self, documents: Iterable[Dict[str, Any]] | None) -> List[Dict[str, Any]]:
+        if not documents:
+            return []
+        return [self._serialize(document) for document in documents if document is not None]
 
+    def _serialize(self, document: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+        if document is None:
+            return None
+        serialized = dict(document)
+        if "_id" in serialized:
+            serialized["_id"] = str(serialized["_id"])
+        return serialized
+
+    def _object_id(self, value: Any) -> Any:
+        if isinstance(value, ObjectId):
+            return value
+        try:
+            return ObjectId(str(value))
+        except (InvalidId, TypeError):
+            return value
 mongo_service = MongoCatalogService()
