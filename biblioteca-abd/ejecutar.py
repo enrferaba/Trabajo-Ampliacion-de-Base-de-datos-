@@ -13,13 +13,20 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "action",
+        nargs="?",
+        default="up",
         choices={"up", "down", "logs", "restart"},
-        help="Docker compose action to execute.",
+        help="Docker compose action to execute (default: up).",
     )
     parser.add_argument(
         "--build",
         action="store_true",
         help="Rebuild images before starting containers when using the 'up' action.",
+    )
+    parser.add_argument(
+        "--no-build",
+        action="store_true",
+        help="Skip image rebuild when using the 'up' action (overrides --build).",
     )
     parser.add_argument(
         "--services",
@@ -43,9 +50,13 @@ def run_compose(args: argparse.Namespace) -> int:
 
     base_cmd = ["docker", "compose", "-f", str(compose_file)]
 
+    if args.build and args.no_build:
+        raise SystemExit("Cannot use --build and --no-build together.")
+
     if args.action == "up":
         cmd = base_cmd + ["up", "-d"]
-        if args.build:
+        should_build = args.build or not args.no_build
+        if should_build:
             cmd.append("--build")
         cmd.extend(args.services)
     elif args.action == "down":
@@ -61,6 +72,7 @@ def run_compose(args: argparse.Namespace) -> int:
         cmd.extend(args.services)
 
     try:
+        print("Ejecutando:", " ".join(cmd))
         completed = subprocess.run(cmd, check=True)
     except subprocess.CalledProcessError as exc:
         return exc.returncode
