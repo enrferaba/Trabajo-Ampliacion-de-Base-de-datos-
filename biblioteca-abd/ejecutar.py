@@ -29,6 +29,11 @@ def parse_args() -> argparse.Namespace:
         help="Skip image rebuild when using the 'up' action (overrides --build).",
     )
     parser.add_argument(
+        "--detach",
+        action="store_true",
+        help="Run services in the background when using the 'up' action.",
+    )
+    parser.add_argument(
         "--services",
         nargs="*",
         default=(),
@@ -54,10 +59,12 @@ def run_compose(args: argparse.Namespace) -> int:
         raise SystemExit("Cannot use --build and --no-build together.")
 
     if args.action == "up":
-        cmd = base_cmd + ["up", "-d"]
+        cmd = base_cmd + ["up"]
         should_build = args.build or not args.no_build
         if should_build:
             cmd.append("--build")
+        if args.detach:
+            cmd.append("-d")
         cmd.extend(args.services)
     elif args.action == "down":
         cmd = base_cmd + ["down"]
@@ -76,6 +83,13 @@ def run_compose(args: argparse.Namespace) -> int:
         completed = subprocess.run(cmd, check=True)
     except subprocess.CalledProcessError as exc:
         return exc.returncode
+    if args.action == "up" and args.detach and not args.services:
+        logs_cmd = base_cmd + ["logs", "-f"]
+        print("Servicios levantados en segundo plano. Mostrando logs (Ctrl+C para salir)...")
+        try:
+            subprocess.run(logs_cmd, check=False)
+        except KeyboardInterrupt:
+            print("\nInterrupción solicitada por el usuario, los servicios siguen en ejecución.")
     return completed.returncode
 
 
