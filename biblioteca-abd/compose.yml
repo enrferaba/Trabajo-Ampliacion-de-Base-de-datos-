@@ -40,11 +40,10 @@ services:
       - redis
   flower:
     image: mher/flower:2.0
-    entrypoint:
-      - flower
     command:
+      - flower
       - "--port=5555"
-      - "--url_prefix="
+      - "--address=0.0.0.0"
       - "--broker=${CELERY_BROKER_URL:-redis://redis:6379/1}"
     env_file:
       - .env
