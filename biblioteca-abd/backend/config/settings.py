@@ -111,9 +111,7 @@ LOGGING = {
     "formatters": {
         "structured": {
             "()": "structlog.stdlib.ProcessorFormatter",
-            "processor": structlog.stdlib.ProcessorFormatter.wrap_for_formatter(
-                structlog.processors.JSONRenderer()
-            ),
+            "processor": structlog.processors.JSONRenderer(),
         }
     },
     "handlers": {
