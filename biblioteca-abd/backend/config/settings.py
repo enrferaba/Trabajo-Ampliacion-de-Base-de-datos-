@@ -111,9 +111,11 @@ LOGGING = {
     "formatters": {
         "structured": {
             "()": "structlog.stdlib.ProcessorFormatter",
-            "processor": structlog.stdlib.ProcessorFormatter.wrap_for_formatter(
-                structlog.processors.JSONRenderer()
-            ),
+            "processor": structlog.processors.JSONRenderer(),
+            "foreign_pre_chain": [
+                structlog.processors.TimeStamper(fmt="iso"),
+                structlog.processors.add_log_level,
+            ],
         }
     },
     "handlers": {
@@ -132,9 +134,11 @@ structlog.configure(
     processors=[
         structlog.processors.TimeStamper(fmt="iso"),
         structlog.processors.add_log_level,
+        structlog.stdlib.add_logger_name,
+        structlog.stdlib.filter_by_level,
         structlog.processors.StackInfoRenderer(),
         structlog.processors.format_exc_info,
-        structlog.processors.JSONRenderer(),
+        structlog.stdlib.ProcessorFormatter.remove_processors_meta,
     ],
     context_class=dict,
     logger_factory=structlog.stdlib.LoggerFactory(),
