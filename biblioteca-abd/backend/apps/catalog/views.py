@@ -40,6 +40,7 @@ class BookViewSet(viewsets.ViewSet):
             filters["authors.id"] = params["author_id"]
         if params["genres"]:
             filters["genres"] = params["genres"].split(",")
+        filters["deleted"] = {"$ne": True}
 
         page = params["page"]
         page_size = params["page_size"]

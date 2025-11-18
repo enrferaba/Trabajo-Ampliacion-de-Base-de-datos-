@@ -75,7 +75,7 @@ class Neo4jService:
         try:
             with driver.session() as session:
                 return session.run(query, **parameters)
-        except Neo4jError:
+        except (Neo4jError, OSError, ValueError):
             return None
         finally:
             driver.close()
