@@ -1,11 +1,11 @@
 import tempfile
 from pathlib import Path
 
+from config.celery import app as celery_app
 from rest_framework import permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from config.celery import app as celery_app
 from .tasks import import_books_from_csv, import_books_from_json
 
 

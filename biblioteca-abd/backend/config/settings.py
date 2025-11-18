@@ -1,8 +1,8 @@
 import os
 from pathlib import Path
 
-from dotenv import load_dotenv
 import structlog
+from dotenv import load_dotenv
 
 load_dotenv()
 
