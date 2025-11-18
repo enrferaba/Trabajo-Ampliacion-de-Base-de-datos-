@@ -4,7 +4,12 @@ from rest_framework import permissions, status, viewsets
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
 
-from ..authx.services.redis_service import cache_get, cache_key_for_books, cache_set
+from ..authx.services.redis_service import (
+    cache_get,
+    cache_key_for_books,
+    cache_set,
+    invalidate_books_cache,
+)
 from .services.mongo_service import mongo_service
 
 
@@ -75,6 +80,7 @@ class BookViewSet(viewsets.ViewSet):
         updated = mongo_service.update_book(pk, {"deleted": True})
         if not updated:
             return Response(status=status.HTTP_404_NOT_FOUND)
+        invalidate_books_cache()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 

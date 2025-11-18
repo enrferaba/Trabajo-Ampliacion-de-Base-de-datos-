@@ -75,5 +75,15 @@ def cache_key_for_books(params: dict[str, Any]) -> str:
     return f"cache:books:list:{digest}"
 
 
+def invalidate_books_cache() -> None:
+    def _invalidate():
+        client = redis_client.client
+        keys = client.keys("cache:books:list:*")
+        if keys:
+            client.delete(*keys)
+
+    _safe_execute(_invalidate)
+
+
 def publish_event(event: str, payload: dict[str, Any]) -> None:
     _safe_execute(lambda: redis_client.client.publish("events:biblioteca", json.dumps({"event": event, "payload": payload})))
