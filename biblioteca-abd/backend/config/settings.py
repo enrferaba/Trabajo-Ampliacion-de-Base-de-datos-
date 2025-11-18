@@ -78,6 +78,9 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 REST_FRAMEWORK = {
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+    "DEFAULT_AUTHENTICATION_CLASSES": [
+        "apps.authx.authentication.SignedTokenAuthentication",
+    ],
     "DEFAULT_THROTTLE_CLASSES": [
         "apps.authx.throttling.UserIPRateThrottle",
     ],
@@ -94,6 +97,7 @@ REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
 CACHE_TTL_SECONDS = int(os.getenv("CACHE_TTL_SECONDS", "300"))
 RATE_LIMIT_WINDOW_SECONDS = int(os.getenv("RATE_LIMIT_WINDOW_SECONDS", "900"))
 RATE_LIMIT_MAX_REQUESTS = int(os.getenv("RATE_LIMIT_MAX_REQUESTS", "100"))
+AUTH_TOKEN_TTL_SECONDS = int(os.getenv("AUTH_TOKEN_TTL_SECONDS", "86400"))
 
 MONGO_URL = os.getenv("MONGO_URL", "mongodb://localhost:27017/")
 MONGO_DB = os.getenv("MONGO_DB", "biblioteca")
