@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.contrib.auth import authenticate
 from django.contrib.auth.models import User
 from django.core import signing
@@ -5,6 +6,7 @@ from rest_framework import permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from .authentication import SignedTokenAuthentication
 from .services.redis_service import cache_delete, cache_set
 
 
@@ -32,12 +34,17 @@ class LoginView(APIView):
         if user is None:
             return Response({"detail": "credenciales invalidas"}, status=status.HTTP_400_BAD_REQUEST)
         token = signing.TimestampSigner().sign(user.pk)
-        cache_set(f"auth:token:{token}", {"user_id": user.pk}, ttl=86400)
+        cache_set(
+            f"auth:token:{token}",
+            {"user_id": user.pk},
+            ttl=getattr(settings, "AUTH_TOKEN_TTL_SECONDS", 86400),
+        )
         return Response({"token": token, "user_id": user.pk})
 
 
 class LogoutView(APIView):
     permission_classes = [permissions.IsAuthenticated]
+    authentication_classes = [SignedTokenAuthentication]
 
     def post(self, request):
         token = request.headers.get("Authorization")
