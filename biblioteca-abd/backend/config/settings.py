@@ -1,8 +1,8 @@
 import os
 from pathlib import Path
 
-from dotenv import load_dotenv
 import structlog
+from dotenv import load_dotenv
 
 load_dotenv()
 
@@ -105,15 +105,29 @@ NEO4J_PASSWORD = os.getenv("NEO4J_PASSWORD", "neo4j")
 CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL", REDIS_URL)
 CELERY_RESULT_BACKEND = os.getenv("CELERY_RESULT_BACKEND", REDIS_URL)
 
+STRUCTLOG_SHARED_PROCESSORS = (
+    structlog.processors.TimeStamper(fmt="iso"),
+    structlog.processors.add_log_level,
+    structlog.processors.StackInfoRenderer(),
+    structlog.processors.format_exc_info,
+)
+
+
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
     "formatters": {
         "structured": {
             "()": "structlog.stdlib.ProcessorFormatter",
-            "processor": structlog.stdlib.ProcessorFormatter.wrap_for_formatter(
-                structlog.processors.JSONRenderer()
-            ),
+            "processors": [
+                structlog.stdlib.ProcessorFormatter.remove_processors_meta,
+                structlog.processors.JSONRenderer(),
+            ],
+            "foreign_pre_chain": [
+                *STRUCTLOG_SHARED_PROCESSORS,
+                structlog.stdlib.ExtraAdder(),
+            ],
+            "pass_foreign_args": True,
         }
     },
     "handlers": {
@@ -130,11 +144,8 @@ LOGGING = {
 
 structlog.configure(
     processors=[
-        structlog.processors.TimeStamper(fmt="iso"),
-        structlog.processors.add_log_level,
-        structlog.processors.StackInfoRenderer(),
-        structlog.processors.format_exc_info,
-        structlog.processors.JSONRenderer(),
+        *STRUCTLOG_SHARED_PROCESSORS,
+        structlog.stdlib.ProcessorFormatter.wrap_for_formatter,
     ],
     context_class=dict,
     logger_factory=structlog.stdlib.LoggerFactory(),
