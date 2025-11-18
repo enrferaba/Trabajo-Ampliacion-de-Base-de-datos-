@@ -52,11 +52,13 @@ class MongoCatalogService:
     def list_books(
         self, filters: Dict[str, Any], sort: str, order: str, skip: int, limit: int
     ) -> List[Dict[str, Any]]:
+        filters = {**filters, "deleted": {"$ne": True}}
         database = self.db()
         sort_key = "avg_rating" if sort == "rating" else "rating_count"
         sort_direction = DESCENDING if order == "desc" else ASCENDING
         if database is None:
-            data = self._apply_filters(self._memory_books, filters)
+            active_books = [book for book in self._memory_books if not book.get("deleted")]
+            data = self._apply_filters(active_books, {k: v for k, v in filters.items() if k != "deleted"})
             return sorted(data, key=lambda x: x.get(sort_key, 0), reverse=sort_direction == DESCENDING)[
                 skip : skip + limit
             ]
@@ -96,10 +98,12 @@ class MongoCatalogService:
         database = self.db()
         if database is None:
             for book in self._memory_books:
-                if str(book.get("_id")) == str(book_id):
+                if str(book.get("_id")) == str(book_id) and not book.get("deleted"):
                     return book
             return None
-        result = database.books.find_one({"_id": self._object_id(book_id)})
+        result = database.books.find_one(
+            {"_id": self._object_id(book_id), "deleted": {"$ne": True}}
+        )
         return self._serialize(result)
 
     def update_book(self, book_id: str, updates: Dict[str, Any]) -> Optional[Dict[str, Any]]:
