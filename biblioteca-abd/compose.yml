@@ -2,7 +2,7 @@ services:
   web:
     build:
       context: ./backend
-    command: python manage.py runserver 0.0.0.0:8000
+    command: ./scripts/run-web.sh
     ports:
       - "8000:8000"
     env_file:

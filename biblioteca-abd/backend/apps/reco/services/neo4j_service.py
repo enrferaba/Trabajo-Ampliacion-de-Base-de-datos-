@@ -14,11 +14,19 @@ class Neo4jService:
     user: str = settings.NEO4J_USER
     password: str = settings.NEO4J_PASSWORD
     _memory_graph: Dict[str, List[Dict[str, Any]]] = field(default_factory=lambda: {"similar": [], "user": []})
+    _driver: Any = field(init=False, default=None, repr=False)
 
     def driver(self):
+        if self._driver is not None:
+            return self._driver
+        driver = None
         try:
-            return GraphDatabase.driver(self.uri, auth=(self.user, self.password))
-        except Neo4jError:
+            driver = GraphDatabase.driver(self.uri, auth=(self.user, self.password))
+            driver.verify_connectivity()
+            self._driver = driver
+            return driver
+        except (Neo4jError, OSError, ValueError):
+            self._close_driver(driver)
             return None
 
     def similar_books(self, book_id: str, top_k: int = 10) -> List[Dict[str, Any]]:
@@ -75,10 +83,19 @@ class Neo4jService:
         try:
             with driver.session() as session:
                 return session.run(query, **parameters)
-        except (Neo4jError, OSError, ValueError):
+        except Neo4jError:
+            self._close_driver()
             return None
+
+    def _close_driver(self, driver=None) -> None:
+        target = driver or self._driver
+        if target is None:
+            return
+        try:
+            target.close()
         finally:
-            driver.close()
+            if target is self._driver:
+                self._driver = None
 
     def _memory_similar(self, book_id: str, top_k: int) -> List[Dict[str, Any]]:
         return [
